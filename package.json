@@ -1,0 +1,23 @@
+{
+  "name": "flappy-drone",
+  "version": "0.0.0",
+  "description": "flappy-drone ============",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/lord/flappy-drone.git"
+  },
+  "author": "Robert Lord",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/lord/flappy-drone/issues"
+  },
+  "homepage": "https://github.com/lord/flappy-drone",
+  "dependencies": {
+    "ar-drone": "^0.3.1",
+    "opencv": "^0.5.0"
+  }
+}
