@@ -1,10 +1,12 @@
 var cv = require('opencv');
+var repl = require('repl');
 
 var lowThresh = 0;
 var highThresh = 100;
 var nIters = 2;
 var minArea = 200;
 var maxArea = 100000;
+var numTests = 6;
 
 var BLUE = [0, 255, 0]; //B, G, R
 var RED   = [0, 0, 255]; //B, G, R
@@ -14,39 +16,42 @@ var WHITE = [255, 255, 255]; //B, G, R
 var THRESH_MIN = [50, 10, 190]; //B, G, R
 var THRESH_MAX = [160, 150, 255]; //B, G, R
 
-cv.readImage('./imgs/5.png', function(err, im) {
-  im.convertHSVscale();
-  im.inRange(THRESH_MIN, THRESH_MAX);
+for (img = 1; img < numTests; img++) {
+  cv.readImage('test/' + img.toString() + '.png', function(err, im) {
+    var markedOut = im.copy();
+    im.convertHSVscale();
+    im.inRange(THRESH_MIN, THRESH_MAX);
 
-  var out = im.copy();
+    var out = im.copy();
 
-  im_canny = im.copy();
+    var im_canny = im.copy();
 
-  im_canny.canny(lowThresh, highThresh);
-  im_canny.dilate(nIters);
+    im_canny.canny(lowThresh, highThresh);
+    im_canny.dilate(nIters);
 
-  contours = im_canny.findContours();
+    var contours = im_canny.findContours();
 
-  for(i = 0; i < contours.size(); i++) {
+    var maxFound = 0;
+    var maxIndex = -1;
 
-    var area = contours.area(i);
-    if(area < minArea || area > maxArea) continue;
+    for(i = 0; i < contours.size(); i++) {
 
-    var arcLength = contours.arcLength(i, true);
-    contours.approxPolyDP(i, 0.01 * arcLength, true);
+      console.log(contours.area(i));
+      var area = contours.area(i);
+      if(area < minArea || area > maxArea) continue;
 
-    if(contours.cornerCount(i) != 4) continue;
+      if(area > maxFound) {
+        maxFound = area;
+        maxIndex = i;
+      }
+    }
 
-    var points = [
-      contours.point(i, 0),
-      contours.point(i, 1),
-      contours.point(i, 2),
-      contours.point(i, 3)
-    ];
+    var rect = contours.boundingRect(maxIndex);
 
-    out.line([points[0].x,points[0].y], [points[2].x, points[2].y], RED);
-    out.line([points[1].x,points[1].y], [points[3].x, points[3].y], RED);
-  }
+    markedOut.line([rect.x, rect.y], [rect.x + rect.width/2, rect.y + rect.height/2], [0, 0, 255]);
+    // repl.start("Greetings flapmaster!  ");
 
-  out.save('./out.png');
-});
+    markedOut.save('test/out' + img.toString() + '.png');
+  });
+
+}
