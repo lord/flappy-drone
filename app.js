@@ -2,7 +2,7 @@
 
 var arDrone = require('ar-drone');
 var cv = require('opencv');
-var http    = require('http');
+var http = require('http');
 var fs = require('fs');
 
 console.log('Connecting png stream ...');
@@ -12,21 +12,35 @@ var client = arDrone.createClient();
 var pngStream = client.getPngStream();
 var processingImage = false;
 var flying = false;
-var lastPng;
+var rawPng;
+var processedPng;
 var navData;
 var startTime = new Date().getTime();
+
+// variables from test.js
+var lowThresh = 0;
+var highThresh = 100;
+var nIters = 2;
+var minArea = 200;
+var maxArea = 100000;
+
+// constants
+var RAW_HEIGHT = 360;
+var RAW_WIDTH = 640;
+var THRESH_MIN = [50, 10, 190]; //B, G, R
+var THRESH_MAX = [160, 150, 255]; //B, G, R
 
 pngStream
   .on('error', console.log)
   .on('data', function(pngBuffer) {
     // console.log("got image");
-    lastPng = pngBuffer;
+    rawPng = pngBuffer;
   });
 
 var scanImage = function() {
-  if( flying && !processingImage && lastPng ) {
+  if( flying && !processingImage && rawPng ) {
     processingImage = true;
-    cv.readImage( lastPng, function(err, im) {
+    cv.readImage( rawPng, function(err, im) {
       var markedOut = im.copy();
       im.convertHSVscale();
       im.inRange(THRESH_MIN, THRESH_MAX);
@@ -55,16 +69,27 @@ var scanImage = function() {
         }
       }
 
+      if (maxIndex === -1) {
+        console.log("No blob found AAAAAAH...");
+        //processingImage = false;
+        return;
+      }
+
       var rect = contours.boundingRect(maxIndex);
 
-      markedOut.line([rect.x, rect.y], [rect.x + rect.width/2, rect.y + rect.height/2], [0, 0, 255]);
-      // repl.start("Greetings flapmaster!  ");
+      var dest = [rect.x + rect.width/2, rect.y + rect.height/2];
+      moveTowards(dest);
 
-      markedOut.save('test/out' + img.toString() + '.png');
+      //processingImage = false;
     });
-
   }
 };
+
+var moveTowards = function(dest) {
+  deltaX = dest[0] - RAW_WIDTH/2;
+  deltaY = dest[1] - RAW_HEIGHT/2;
+  console.log("deltaX = " + deltaX + "  deltaY = " + deltaY);
+}
 
 var scanInterval = setInterval( scanImage, 150);
 
@@ -82,14 +107,14 @@ client.config('video:video_channel', 3); // set to use down camera
 client.takeoff();
 
 var server = http.createServer(function(req, res) {
-  if (!lastPng) {
+  if (!rawPng) {
     res.writeHead(503);
     res.end('Did not receive any png data yet.');
     return;
   }
 
   res.writeHead(200, {'Content-Type': 'image/png'});
-  res.end(lastPng);
+  res.end(rawPng);
 });
 
 server.listen(8080, function() {
