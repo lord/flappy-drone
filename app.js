@@ -37,7 +37,11 @@ pngStream
     rawPng = pngBuffer;
   });
 
+var i = 0;
+
 var scanImage = function() {
+  i++;
+
   if( flying && !processingImage && rawPng ) {
     processingImage = true;
     cv.readImage( rawPng, function(err, im) {
@@ -58,7 +62,6 @@ var scanImage = function() {
       var maxIndex = -1;
 
       for(i = 0; i < contours.size(); i++) {
-
         console.log(contours.area(i));
         var area = contours.area(i);
         if(area < minArea || area > maxArea) continue;
@@ -69,18 +72,24 @@ var scanImage = function() {
         }
       }
 
+      if (maxIndex != -1) {
+        var rect = contours.boundingRect(maxIndex);
+        var dest = [rect.x + rect.width/2, rect.y + rect.height/2];
+        markedOut.line([rect.x, rect.y], [rect.x + rect.width, rect.y + rect.height]);
+        markedOut.line([rect.x + rect.width, rect.y], [rect.x, rect.y + rect.height]);
+      }
+
+      markedOut.save('out' + i + '.png');
+
       if (maxIndex === -1) {
         console.log("No blob found AAAAAAH...");
-        //processingImage = false;
+        processingImage = false;
         return;
       }
 
-      var rect = contours.boundingRect(maxIndex);
-
-      var dest = [rect.x + rect.width/2, rect.y + rect.height/2];
       moveTowards(dest);
 
-      //processingImage = false;
+      processingImage = false;
     });
   }
 };
@@ -91,7 +100,7 @@ var moveTowards = function(dest) {
   console.log("deltaX = " + deltaX + "  deltaY = " + deltaY);
 }
 
-var scanInterval = setInterval( scanImage, 150);
+var scanInterval = setInterval( scanImage, 500);
 
 // configure client
 client.on('navdata', function(navdata) {
@@ -100,6 +109,10 @@ client.on('navdata', function(navdata) {
 
 client.after(5000, function() {
   flying = true;
+});
+
+client.after(10000, function() {
+  this.land();
 });
 
 client.config('video:video_channel', 3); // set to use down camera
