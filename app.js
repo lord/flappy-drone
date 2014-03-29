@@ -16,6 +16,7 @@ var rawPng;
 var processedPng;
 var navData;
 var startTime = new Date().getTime();
+var timeOut = 50000;
 
 // variables from test.js
 var lowThresh = 0;
@@ -37,10 +38,10 @@ pngStream
     rawPng = pngBuffer;
   });
 
-var i = 0;
+var foobar = 0;
 
 var scanImage = function() {
-  i++;
+  foobar++;
 
   if( flying && !processingImage && rawPng ) {
     processingImage = true;
@@ -62,7 +63,6 @@ var scanImage = function() {
       var maxIndex = -1;
 
       for(i = 0; i < contours.size(); i++) {
-        console.log(contours.area(i));
         var area = contours.area(i);
         if(area < minArea || area > maxArea) continue;
 
@@ -79,11 +79,12 @@ var scanImage = function() {
         markedOut.line([rect.x + rect.width, rect.y], [rect.x, rect.y + rect.height]);
       }
 
-      markedOut.save('out' + i + '.png');
+      markedOut.save('out' + foobar + '.png');
 
       if (maxIndex === -1) {
         console.log("No blob found AAAAAAH...");
         processingImage = false;
+        client.stop();
         return;
       }
 
@@ -98,6 +99,8 @@ var moveTowards = function(dest) {
   deltaX = dest[0] - RAW_WIDTH/2;
   deltaY = dest[1] - RAW_HEIGHT/2;
   console.log("deltaX = " + deltaX + "  deltaY = " + deltaY);
+  client.front(deltaY / 5000);
+  client.right(deltaX / 5000);
 }
 
 var scanInterval = setInterval( scanImage, 500);
@@ -111,8 +114,10 @@ client.after(5000, function() {
   flying = true;
 });
 
-client.after(10000, function() {
+client.after(timeOut, function() {
+  console.log("Game over!");
   this.land();
+  flying = false;
 });
 
 client.config('video:video_channel', 3); // set to use down camera
